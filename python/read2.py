@@ -16,8 +16,9 @@ resetSleep = 0.01
 currentAudio = None
 placementCounter = 0
 counterLimit = 4
-# VLC_INSTANCE = vlc.Instance('--aout=alsa')
-media_player = vlc.MediaPlayer()
+
+vlc_instance = vlc.Instance('--aout=alsa')
+media_player = vlc_instance.media_player_new()
 
 GPIO.setmode(GPIO.BOARD)
 GPIO.setup(11, GPIO.OUT, initial=GPIO.LOW)
@@ -33,18 +34,20 @@ try:
 			reader.pn5180.spi.close()
 			if text: 
 				placementCounter = 0
-				print("tag content: ", text, flush=True)
+				print("tag content: ", text, ' open files: ', count_open_files(), flush=True)
 				if text in allAudios and currentAudio != text:
 					currentAudio = text
 					if media_player.is_playing(): media_player.stop()
-					media = vlc.Media('audio/' + text)
+					# media = vlc.Media('audio/' + text)
+					media = vlc_instance.media_new('audio/' + text)
 					media_player.set_media(media)
 					media_player.play()
 
 				if text.startswith('https') and currentAudio != text:
 						currentAudio = text
 						if media_player.is_playing(): media_player.stop()
-						media = vlc.Media(text)
+						# media = vlc.Media(text)
+						media = vlc_instance.media_new('audio/' + text)
 						media_player.set_media(media)
 						media_player.play()
 			else:
