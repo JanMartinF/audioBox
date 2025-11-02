@@ -12,22 +12,17 @@ currentAudio = None
 placementCounter = 0
 counterLimit = 4
 # VLC_INSTANCE = vlc.Instance('--aout=alsa')
-# vlc.Instance('--aout=alsa')s
 media_player = vlc.MediaPlayer()
 
 GPIO.setmode(GPIO.BOARD)
 GPIO.setup(11, GPIO.OUT, initial=GPIO.LOW)
 
-GPIO.output(11, GPIO.HIGH)
-# time.sleep(resetSleep)
-# time.sleep(resetSleep)
-# GPIO.output(11, GPIO.LOW)
-reader = iso_iec_15693()
 try:
 	while True:
 		try:
-			reader.pn5180.rfOn(reader.pn5180.RF_ON_MODE["STANDARD"])
-			time.sleep(0.01)  # Brief delay for RF to stabilize
+			GPIO.setup(11, GPIO.OUT, initial=GPIO.HIGH)
+			time.sleep(resetSleep)
+			reader = iso_iec_15693()
 			text = read_full_tag_content(reader)
 			if text: 
 				placementCounter = 0
@@ -52,12 +47,10 @@ try:
 				else:
 					placementCounter += 1
 				
-			# GPIO.output(11, GPIO.LOW)
-			reader.pn5180.rfOff()
+			GPIO.output(11, GPIO.LOW)
 			time.sleep(idleSleep - resetSleep)
 		except Exception as e:
-			# GPIO.output(11, GPIO.LOW)
-			reader.pn5180.rfOff()
+			GPIO.output(11, GPIO.LOW)
 			time.sleep(idleSleep - resetSleep)
 except KeyboardInterrupt:
 	print("Closing program", flush=True)

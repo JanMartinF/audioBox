@@ -84,7 +84,11 @@ class PN5180(PN5180_HIL):
     Soft reset, configure default parameters for Iso IEC 15693 and enable RF
     """
     def configureIsoIec15693Mode(self):
+        # TODO :
+        #   - do a clean interface selector, not hard coded
+        #   - Configure CRC registers
         self.softwareReset()
+
         # RF_CFG = {        
         # 'TX_ISO_15693_ASK100':0x0D, # 26 kbps
         # 'RX_ISO_15693_26KBPS':0x8D, # 26 kbps
@@ -113,11 +117,13 @@ class PN5180(PN5180_HIL):
         if response:
             flags = response[0]
             data = response[1:]
+            # print("Received %d bytes from sensor: [flags]: %x, [data]: %r" %(nbBytes, flags, [hex(x) for x in data]))
         else:
             flags = 0xFF
             data = []
 
         self.setSystemCommand("COMMAND_IDLE_SET")
+
         return flags, data
 
 
@@ -138,7 +144,6 @@ class PN5180(PN5180_HIL):
 
 
     def softwareReset(self):
-        
         self.writeRegisterOrMask(self.REG_ADDR["SYSTEM_CONFIG"],self.SYSTEM_CONFIG["RESET_SET"])
         self._usDelay(50000) # 50ms
         self.writeRegisterAndMask(self.REG_ADDR["SYSTEM_CONFIG"],self.SYSTEM_CONFIG["RESET_CLR"])

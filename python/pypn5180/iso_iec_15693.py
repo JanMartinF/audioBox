@@ -103,6 +103,7 @@ class iso_iec_15693(object):
         frame.insert(1, self.CMD_CODE['READ_SINGLE_BLOCK'])
         if uid is not []:
             frame.extend(uid)
+            # TODO : Add uid bit in flags
         frame.append(blockNumber)
         flags, data = self.pn5180.transactionIsoIec15693(frame)
         error = self.getError(flags, data)
