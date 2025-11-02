@@ -14,7 +14,6 @@ class PN5180(PN5180_HIL):
     }
 
     MAX_REGISTER_ADDR = 0x29
-
     """
     getFirmwareVersion(self)
     response : 2 bytes 
@@ -117,7 +116,6 @@ class PN5180(PN5180_HIL):
         if response:
             flags = response[0]
             data = response[1:]
-            # print("Received %d bytes from sensor: [flags]: %x, [data]: %r" %(nbBytes, flags, [hex(x) for x in data]))
         else:
             flags = 0xFF
             data = []

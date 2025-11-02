@@ -4,6 +4,11 @@ from pypn5180.iso_iec_15693 import iso_iec_15693
 import vlc
 import time, os
 
+def count_open_files():
+    """Count number of open file descriptors for this process"""
+    pid = os.getpid()
+    return len(os.listdir(f'/proc/{pid}/fd'))
+
 allAudios = os.listdir("./audio")
 
 idleSleep = 1
@@ -16,6 +21,7 @@ media_player = vlc.MediaPlayer()
 
 GPIO.setmode(GPIO.BOARD)
 GPIO.setup(11, GPIO.OUT, initial=GPIO.LOW)
+print(f"Initial open files: {count_open_files()} for pid {os.getpid()}", flush=True)
 
 try:
 	while True:
@@ -24,6 +30,7 @@ try:
 			time.sleep(resetSleep)
 			reader = iso_iec_15693()
 			text = read_full_tag_content(reader)
+			reader.pn5180.spi.close()
 			if text: 
 				placementCounter = 0
 				print("tag content: ", text, flush=True)
@@ -54,3 +61,4 @@ try:
 			time.sleep(idleSleep - resetSleep)
 except KeyboardInterrupt:
 	print("Closing program", flush=True)
+	print(f"Final open files: {count_open_files()}")

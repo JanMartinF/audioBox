@@ -1,68 +1,20 @@
-import time
-import struct
-import binascii
+import time, struct, binascii, spidev
 from os import sys
 
-if sys.version_info[0] < 3:
-    PY_VERSION = 2
-else:
-    PY_VERSION = 3
-
-try:
-    from pyftdi import spi
-    SPI_DEVICE = "FTDI"
-
-except:
-    try:
-        import spidev
-        SPI_DEVICE = "RASPI"
-    except :
-        print("** Error importing SPI interface. Need spidev on RASPI (python 2.7) or pyftdi (python 3) on X86 **")
-        SPI_DEVICE = "ERROR"
-        sys.exit()
-
-
-
 class _spi():
-
     def __init__(self, bus=0, device=0, speed=1e6, ftdi_port="PORT_A"):
-        if SPI_DEVICE == "RASPI":
-            self.device = spidev.SpiDev()
-            self.device.open(bus, device)
-            self.device.max_speed_hz = speed
-            self.xfer = self.device.xfer
+        self.device = spidev.SpiDev()
+        self.device.open(bus, device)
+        self.device.max_speed_hz = speed
+        self.xfer = self.device.xfer
 
-        elif SPI_DEVICE == "FTDI":
-            # Configure FTDI PORT A or PORT B here:
-            # Port A: ftdi://ftdi:2232h/1
-            # Port B: ftdi://ftdi:2232h/2
-            if ftdi_port == "PORT_A":
-                ftdi_devid = "ftdi://ftdi:2232h/1"
-            else:
-                ftdi_devid = "ftdi://ftdi:2232h/2"
-
-            self.device = spi.SpiController()
-            self.device.configure(ftdi_devid)
-            self.slave = self.device.get_port(cs=0, freq=speed, mode=0)
-            self.xfer = self.ftdi_xfer
-            print("Conected to FTDI SPI %s" %ftdi_devid)
-        else:
-            self.device = None            
+    def close(self):
+        """Close the SPI device and free file descriptor"""
+        if self.device:
+            self.device.close()
+            self.device = None
             self.xfer = None
 
-    def ftdi_xfer(self, xfert_data):
-        data = bytearray(bytes(xfert_data))
-        # print('TxData: %r' %data)
-        read_buf = self.slave.exchange(data, duplex=True)
-        # print('RxData: %r' %read_buf)
-        return read_buf
-
-
-"""
-Hardware interface layer:
-This class defines basic access commands to the PN5180 as specified 
-in the NXP-PN5180A0xx/C1/C2 Datasheet
-"""
 class PN5180_HIL(object):
     # Commands Details
     # NXP-PN5180A0xx/C1/C2 Datasheet
@@ -196,10 +148,8 @@ class PN5180_HIL(object):
             print("Error opening SPI device : %r" %exc)
             sys.exit()
 
-
     def _usDelay(self, useconds):
         time.sleep(useconds / 1000000.0)
-
 
     def _getResponse(self, responseLen):
         # Send 0xFF bytes to get response bytes if any
@@ -207,7 +157,6 @@ class PN5180_HIL(object):
             return self.spi.xfer([0xff]*responseLen)
         else:
             return []
-
 
     def _sendCommand(self, cmd, parameters, responseLen=0):
         # Send [cmd][parametes]
@@ -220,38 +169,21 @@ class PN5180_HIL(object):
         self._usDelay(5000) # TODO : Manage busy signal instead of hard sleep
         return self._getResponse(responseLen)
 
-
     # FIXME: python2/3 support, better way ?   
     def _toList(self, num32):
-        if PY_VERSION == 2:
-            return map(ord,list(struct.pack("<I", num32)))
-        else:
-            return list(struct.pack("<I", num32))
-
+        return list(struct.pack("<I", num32))
 
     # FIXME: python2/3 support, better way ?
     def _toInt32(self, byte_list):
-        if PY_VERSION == 2:
-            return struct.unpack("<I","".join(map(chr,byte_list)))[0]
-        else :
-            return struct.unpack("<I",bytes(byte_list))[0]
-
+        return struct.unpack("<I",bytes(byte_list))[0]
 
     # FIXME: python2/3 support, better way ?
     def _toInt16(self, byte_list):
-        if PY_VERSION == 2:
-            return struct.unpack("<H","".join(map(chr,byte_list)))[0]
-        else :
-            return struct.unpack("<H",bytes(byte_list))[0]
-
+        return struct.unpack("<H",bytes(byte_list))[0]
 
     # FIXME: python2/3 support, better way ?
     def _toHex(self, byte_list):
-        if PY_VERSION == 2:
-            return binascii.hexlify("".join(map(chr,byte_list)))
-        else :
-            return binascii.hexlify(bytes(byte_list))
-
+        return binascii.hexlify(bytes(byte_list))
 
     """
     writeRegister(self, address, content)
@@ -284,7 +216,6 @@ class PN5180_HIL(object):
         parameters.insert(0, address)
         parameters = parameters + self._toList(orMask)
         return self._sendCommand(self.CMD['WRITE_REGISTER_OR_MASK'], parameters, 0)
-
 
     """
     writeRegisterAndMask(self, address, andMask)
@@ -393,4 +324,3 @@ class PN5180_HIL(object):
         parameters = []
         parameters.insert(0, 0)
         return self._sendCommand(self.CMD['RF_OFF'], parameters, 0)
-

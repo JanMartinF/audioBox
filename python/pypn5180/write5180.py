@@ -44,7 +44,6 @@ def write_string_to_tag(stringToWrite):
 
       if len(data) != 9 and flags != 0x00:
          print("Error: No ISO 15693 tag detected or responded.")
-         reader.disconnect()
          return False
          
       dsfid = hex(data[0])
@@ -76,6 +75,3 @@ def write_string_to_tag(stringToWrite):
             
    except Exception as e:
       print(f"\nAn unhandled error occurred: {e}")
-   finally:
-      if 'reader' in locals():
-         reader.disconnect()
