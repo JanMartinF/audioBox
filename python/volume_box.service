@@ -1,0 +1,15 @@
+[Unit]
+Description=AudioBox service to read nfc tags and play audio files
+After=network.target
+
+[Service]
+Type=simple
+User=jan
+WorkingDirectory=/home/jan
+ExecStartPre=/bin/sleep 5
+ExecStart=/home/jan/env/bin/python3 /home/jan/volumeButton.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

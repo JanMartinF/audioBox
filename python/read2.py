@@ -23,7 +23,6 @@ media_player = vlc_instance.media_player_new()
 GPIO.setmode(GPIO.BOARD)
 GPIO.setup(11, GPIO.OUT, initial=GPIO.LOW)
 print(f"Initial open files: {count_open_files()} for pid {os.getpid()}", flush=True)
-
 try:
 	while True:
 		try:
@@ -63,5 +62,7 @@ try:
 			GPIO.output(11, GPIO.LOW)
 			time.sleep(idleSleep - resetSleep)
 except KeyboardInterrupt:
+	GPIO.output(11, GPIO.LOW)
+	GPIO.cleanup()
 	print("Closing program", flush=True)
 	print(f"Final open files: {count_open_files()}")

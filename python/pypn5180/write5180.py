@@ -29,18 +29,18 @@ def write_string_to_tag(stringToWrite):
    try:
       print("\n[1] Initializing reader...")
       reader = iso_iec_15693()
-      print("\n[2] Waiting for ISO 15693 Tag (Attempt 1 of 10)...")
+      print("\n[2] Waiting for ISO 15693 Tag (Attempt 1 of 100)...")
       inventory_frame = [0x26, 0x01, 0x00]
       flags, data = (0xFF, [])
-      for i in range(1, 11):
+      for i in range(1, 101):
          if i > 1:
-               print(f"Waiting for ISO 15693 Tag (Attempt {i} of 10)...")
+               print(f"Waiting for ISO 15693 Tag (Attempt {i} of 100)...")
          
          flags, data = reader.pn5180.transactionIsoIec15693(inventory_frame) 
          
          if len(data) == 9 or (flags == 0x00 and len(data) > 0): 
                break
-         time.sleep(0.75) 
+         time.sleep(1) 
 
       if len(data) != 9 and flags != 0x00:
          print("Error: No ISO 15693 tag detected or responded.")
