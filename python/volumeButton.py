@@ -7,30 +7,41 @@ import threading
 from RPi import GPIO
 from queue import Queue
 
-DEBUG = True
-
 # SETTINGS
 # ========
 
 # The two pins that the encoder uses (BCM numbering).
 GPIO_A = 33
 GPIO_B = 31
-
-# The pin that the knob's button is hooked up to. If you have no button, set
-# this to None.
 GPIO_BUTTON = None
 
-VOLUME_MIN = 65    
-VOLUME_MAX = 118
+VOLUME_MIN = 100
+VOLUME_MAX = 255
 
-VOLUME_INCREMENT = 1
+DEFAULT_HEADPHONE_VOLUME = 90
+DEFAULT_SPEAKER_VOLUME = 112
+subprocess.run(['amixer', 'set', 'Headphone', f'{DEFAULT_HEADPHONE_VOLUME}'])
+subprocess.run(['amixer', 'set', 'Speaker', f'{DEFAULT_SPEAKER_VOLUME}'])
+
+VOLUME_INCREMENT = 1 
 QUEUE = Queue()
 EVENT = threading.Event()
 
-def debug(str):
-  if not DEBUG:
-    return
-  print(str)
+
+#TODOJAN FIX THIS
+def on_headphone_jack_change(event):
+  print("headphone event: ", event, flush=True)
+  EVENT.set()
+
+def clean_up_headphone_jack_gpio():
+  GPIO.remove_event_detect(GPIO_HEADPHONE)
+  GPIO.cleanup()
+
+GPIO_HEADPHONE = 37
+GPIO.setmode(GPIO.BOARD)
+GPIO.setup(GPIO_HEADPHONE, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.add_event_detect(GPIO_HEADPHONE, GPIO.BOTH, on_headphone_jack_change)
+
 
 class RotaryEncoder:
   def __init__(self, gpioA, gpioB, callback=None, buttonPin=None, buttonCallback=None):
@@ -57,7 +68,7 @@ class RotaryEncoder:
       GPIO.setup(self.gpioButton, GPIO.IN, pull_up_down=GPIO.PUD_UP)
       GPIO.add_event_detect(self.gpioButton, GPIO.FALLING, self._buttonCallback, bouncetime=500)
     
-    
+
   def destroy(self):
     GPIO.remove_event_detect(self.gpioA)
     GPIO.remove_event_detect(self.gpioB)
@@ -98,39 +109,49 @@ if __name__ == "__main__":
   def on_turn(delta):
     QUEUE.put(delta)
     EVENT.set()
-    
+  
+
+
   def consume_queue():
+    headphones_plugged_in = GPIO.input(GPIO_HEADPHONE) == 0
+    muted_output = "Speaker" if headphones_plugged_in else "Headphone"
+    audio_output = "Headphone" if headphones_plugged_in else "Speaker"
+    subprocess.run(['amixer', 'set', f'{muted_output}', f'0'])
+    subprocess.run(['amixer', 'set', f'{audio_output}', f'{DEFAULT_HEADPHONE_VOLUME if headphones_plugged_in else DEFAULT_SPEAKER_VOLUME}']) 
     while not QUEUE.empty():
       delta = QUEUE.get()
       handle_delta(delta)
 
   def get_current_volume():
-    result = subprocess.run(['amixer', 'get', 'Speaker'], 
+    result = subprocess.run(['amixer', 'get', f'Playback'], 
                           capture_output=True, text=True)
-    match = re.search(r'Front Left: Playback (\d+)', result.stdout)
-    print("volume: ", match.group(1), flush=True)
+    match = re.search(r'Front Left: (\d+)', result.stdout)
+    print("volume: ", match.group(1))
     return int(match.group(1)) if match else VOLUME_MIN
   
   def handle_delta(delta):
+    current_volume = get_current_volume()
     if delta == 1:
-      if get_current_volume() <= VOLUME_MIN:
+      if current_volume <= VOLUME_MIN:
+        subprocess.run(['amixer', 'set', 'Playback', f'{VOLUME_MIN}'])
         return
-      subprocess.run(['amixer', 'set', 'Speaker', '1-'])
+      subprocess.run(['amixer', 'set', f'Playback', f'{current_volume - VOLUME_INCREMENT}'])
     else: 
-      if get_current_volume() >= VOLUME_MAX:
+      if current_volume >= VOLUME_MAX:
+        subprocess.run(['amixer', 'set', f'Playback', f'{VOLUME_MAX}'])
         return
-      print("up")
-      subprocess.run(['amixer', 'set', 'Speaker', '1+'])
-    
+      subprocess.run(['amixer', 'set', f'Playback', f'{current_volume + VOLUME_INCREMENT}'])
+
   def on_exit(a, b):
     print("Exiting...")
     encoder.destroy()
+    clean_up_headphone_jack_gpio()
     sys.exit(0)
     
-  debug("Volume knob using pins {} and {}".format(gpioA, gpioB))
+  print("Volume knob using pins {} and {}".format(gpioA, gpioB))
   
   if gpioButton != None:
-    debug("Volume button using pin {}".format(gpioButton))
+    print("Volume button using pin {}".format(gpioButton))
   
 
   encoder = RotaryEncoder(GPIO_A, GPIO_B, callback=on_turn, buttonPin=GPIO_BUTTON)
