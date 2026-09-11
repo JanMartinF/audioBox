@@ -1,5 +1,5 @@
-python/audio/*
+audio/*
 STLs
 testBed.py
-python/config.txt
+config.txt
 imageSave.img
