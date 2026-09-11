@@ -1,4 +1,5 @@
 audio/*
+!audio/audio_example.mp3
 STLs
 testBed.py
 config.txt
