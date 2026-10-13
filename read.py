@@ -12,7 +12,7 @@ def count_open_files():
 allAudios = os.listdir("./audio")
 
 idleSleep = 1
-resetSleep = 0.01
+resetSleep = 1
 currentAudio = None
 placementCounter = 0
 counterLimit = 4
@@ -22,15 +22,19 @@ media_player = vlc_instance.media_player_new()
 
 GPIO.setmode(GPIO.BOARD)
 GPIO.setup(11, GPIO.OUT, initial=GPIO.LOW)
+reader = iso_iec_15693()
+
 print(f"Initial open files: {count_open_files()} for pid {os.getpid()}", flush=True)
 try:
 	while True:
 		try:
-			GPIO.setup(11, GPIO.OUT, initial=GPIO.HIGH)
-			time.sleep(resetSleep)
-			reader = iso_iec_15693()
+			GPIO.output(11, GPIO.HIGH)
+			reader.pn5180.configureIsoIec15693Mode()
+			time.sleep(1)
+			# reader = iso_iec_15693()
 			text = read_full_tag_content(reader)
-			reader.pn5180.spi.close()
+			GPIO.output(11, GPIO.LOW)
+			# reader.pn5180.spi.close()
 			if text: 
 				placementCounter = 0
 				print("tag content: ", text, ' open files: ', count_open_files(), flush=True)
@@ -56,11 +60,12 @@ try:
 				else:
 					placementCounter += 1
 				
-			GPIO.output(11, GPIO.LOW)
-			time.sleep(idleSleep - resetSleep)
+			# GPIO.output(11, GPIO.LOW)
+			time.sleep(resetSleep)
 		except Exception as e:
 			GPIO.output(11, GPIO.LOW)
 			time.sleep(idleSleep - resetSleep)
+			print("ERRORR", e)
 except KeyboardInterrupt:
 	GPIO.output(11, GPIO.LOW)
 	GPIO.cleanup()
